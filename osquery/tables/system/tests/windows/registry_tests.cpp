@@ -261,5 +261,18 @@ TEST_F(RegistryTablesTest, test_populate_subkeys_invalid_middle_key) {
         return boost::starts_with(key, validKey2);
       }));
 }
+
+TEST_F(RegistryTablesTest, test_populate_subkeys_filter) {
+  Status status;
+  std::set<std::string> validKey = {"HKEY_CURRENT_USER\\AppEvents"};
+
+  status = populateSubkeys(validKey, false, "NoMatch");
+  EXPECT_TRUE(status.ok());
+  EXPECT_EQ(validKey.size(), 1);
+
+  status = populateSubkeys(validKey, false, "%");
+  EXPECT_TRUE(status.ok());
+  EXPECT_TRUE(validKey.size() > 1);
+}
 } // namespace tables
 } // namespace osquery

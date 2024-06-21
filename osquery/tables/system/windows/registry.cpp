@@ -15,6 +15,7 @@
 
 #include <iterator>
 #include <map>
+#include <regex>
 #include <string>
 
 #include <boost/algorithm/hex.hpp>
@@ -418,7 +419,9 @@ static inline void populateDefaultKeys(std::set<std::string>& rKeys) {
               std::inserter(rKeys, rKeys.end()));
 }
 
-inline Status populateSubkeys(std::set<std::string>& rKeys, bool replaceKeys) {
+inline Status populateSubkeys(std::set<std::string>& rKeys,
+                              bool replaceKeys,
+                              std::string filter) {
   std::set<std::string> newKeys;
   if (!replaceKeys) {
     newKeys = rKeys;
@@ -435,7 +438,20 @@ inline Status populateSubkeys(std::set<std::string>& rKeys, bool replaceKeys) {
       return ret;
     }
     for (const auto& r : regResults) {
-      if (r.at("type") == "subkey") {
+      if (r.at("type") != "subkey") {
+        continue;
+      }
+      if (filter.empty() || filter == "%") {
+        newKeys.insert(r.at("path"));
+        continue;
+      }
+      std::regex escapeChars(R"([\^$.|?*+(){}[\]])");
+      auto escapedFilter = std::regex_replace(filter, escapeChars, R"(\$&)");
+      if (filter.find('%') != std::string::npos) {
+        boost::replace_all(escapedFilter, "%", ".*");
+      }
+      if (std::regex_match(r.at("name"),
+                           std::regex(escapedFilter, std::regex::icase))) {
         newKeys.insert(r.at("path"));
       }
     }
@@ -511,7 +527,7 @@ Status expandRegistryGlobs(const std::string& pattern,
         *elem == pathElems.back()) {
       return populateAllKeysRecursive(results);
     } else if ((*elem).find(kSQLGlobWildcard) != std::string::npos) {
-      auto ret = populateSubkeys(results, true);
+      auto ret = populateSubkeys(results, true, *elem);
       if (!ret.ok()) {
         return ret;
       }

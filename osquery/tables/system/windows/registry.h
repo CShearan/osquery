@@ -130,7 +130,8 @@ Status getUsernameFromKey(const std::string& key, std::string& rUsername);
  * success
  */
 inline Status populateSubkeys(std::set<std::string>& rKeys,
-                              bool replaceKeys = false);
+                              bool replaceKeys = false,
+                              std::string filter = "");
 
 } // namespace tables
 } // namespace osquery
